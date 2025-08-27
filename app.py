@@ -1624,10 +1624,11 @@ def show_admin_dashboard():
         show_edit_form()
     else:
         # Tabs principaux - bien visibles
-        tab1, tab2, tab3 = st.tabs([
+        tab1, tab2, tab3, tab4 = st.tabs([
             "📊 **TABLEAU DE BORD**", 
             "➕ **CRÉER SOUMISSION HÉRITAGE**", 
-            "📤 **UPLOADER DOCUMENT**"
+            "📤 **UPLOADER DOCUMENT**",
+            "💾 **SAUVEGARDES**"
         ])
         
         with tab1:
@@ -1645,6 +1646,11 @@ def show_admin_dashboard():
         
         with tab3:
             show_upload_section()
+        
+        with tab4:
+            # Onglet de sauvegarde
+            import backup_manager
+            backup_manager.show_backup_interface()
 
 def show_upload_section():
     """Section d'upload de documents"""

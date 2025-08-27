@@ -23,6 +23,9 @@ COPY . .
 RUN mkdir -p data files && \
     chmod -R 777 data files
 
+# Rendre le script d'initialisation exécutable
+RUN chmod +x init_render.sh
+
 # Variable d'environnement pour le port
 ENV PORT=8501
 
@@ -30,9 +33,14 @@ ENV PORT=8501
 EXPOSE $PORT
 
 # Commande de démarrage
-CMD streamlit run app.py \
-    --server.port=$PORT \
-    --server.address=0.0.0.0 \
-    --server.headless=true \
-    --browser.gatherUsageStats=false \
-    --server.enableCORS=false
+# Utilise le script d'initialisation si on est sur Render, sinon commande normale
+CMD if [ "$RENDER" = "true" ]; then \
+        ./init_render.sh; \
+    else \
+        streamlit run app.py \
+        --server.port=$PORT \
+        --server.address=0.0.0.0 \
+        --server.headless=true \
+        --browser.gatherUsageStats=false \
+        --server.enableCORS=false; \
+    fi
