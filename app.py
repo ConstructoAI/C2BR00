@@ -754,6 +754,65 @@ def create_approval_page(submission):
                 width: 100%;
             }
         }
+        
+        /* Styles pour l'impression */
+        @media print {
+            /* Cacher les éléments non nécessaires */
+            .approval-section, 
+            .download-btn,
+            button {
+                display: none !important;
+            }
+            
+            /* Forcer les couleurs et fonds */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            /* Configuration de la page */
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            
+            /* Éviter les coupures de page */
+            .info-section, 
+            .document-viewer {
+                page-break-inside: avoid;
+            }
+            
+            /* Réduire les marges et paddings */
+            .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Afficher l'iframe en entier */
+            iframe {
+                height: auto !important;
+                max-height: none !important;
+                page-break-inside: auto;
+            }
+            
+            /* Forcer l'affichage du contenu complet */
+            #document-content {
+                height: auto !important;
+                overflow: visible !important;
+            }
+            
+            /* Conserver les couleurs de fond */
+            .header {
+                background: #3b82f6 !important;
+                color: white !important;
+            }
+            
+            .info-grid {
+                background: #f1f5f9 !important;
+            }
+        }
     </style>
     """
     
@@ -825,7 +884,7 @@ def create_approval_page(submission):
             </div>
     """
     
-    # Ajouter les boutons d'approbation si en attente
+    # Ajouter les boutons d'approbation et de téléchargement PDF si en attente
     if submission['statut'] == 'en_attente':
         html += f"""
             <div class="approval-section">
@@ -838,25 +897,38 @@ def create_approval_page(submission):
                     <a href="?token={token}&action=reject" class="approval-btn reject-btn">
                         <i class="fas fa-times"></i> REFUSER
                     </a>
+                    <button onclick="window.print()" class="approval-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-print"></i> IMPRIMER PDF
+                    </button>
                 </div>
             </div>
         """
     elif submission['statut'] == 'approuvee':
-        html += """
+        html += f"""
             <div class="approval-section" style="background: #d5f4e6;">
                 <div class="approval-title" style="color: #27ae60;">
                     <i class="fas fa-check-circle"></i> Soumission Approuvée
                 </div>
                 <p style="color: #27ae60;">Cette soumission a été approuvée avec succès.</p>
+                <div class="approval-buttons" style="margin-top: 20px;">
+                    <button onclick="window.print()" class="approval-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-print"></i> IMPRIMER PDF
+                    </button>
+                </div>
             </div>
         """
     else:
-        html += """
+        html += f"""
             <div class="approval-section" style="background: #fadbd8;">
                 <div class="approval-title" style="color: #e74c3c;">
                     <i class="fas fa-times-circle"></i> Soumission Refusée
                 </div>
                 <p style="color: #e74c3c;">Cette soumission a été refusée.</p>
+                <div class="approval-buttons" style="margin-top: 20px;">
+                    <button onclick="window.print()" class="approval-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-print"></i> IMPRIMER PDF
+                    </button>
+                </div>
             </div>
         """
     
@@ -1018,6 +1090,7 @@ def show_heritage_client_view(token):
     try:
         import sqlite3
         import soumission_heritage
+        import base64
         
         # Récupérer la soumission avec le token
         conn = sqlite3.connect('data/soumissions_heritage.db')
@@ -1045,12 +1118,14 @@ def show_heritage_client_view(token):
             
             icon, label, type_msg = status_icons.get(result[5], ('❓', 'Inconnu', 'info'))
             
-            if result[5] == 'en_attente':
-                st.info(f"{icon} **Statut:** {label} - En attente de votre décision")
-            elif result[5] == 'approuvee':
-                st.success(f"{icon} **Statut:** {label}")
-            elif result[5] == 'refusee':
-                st.error(f"{icon} **Statut:** {label}")
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                if result[5] == 'en_attente':
+                    st.info(f"{icon} **Statut:** {label} - En attente de votre décision")
+                elif result[5] == 'approuvee':
+                    st.success(f"{icon} **Statut:** {label}")
+                elif result[5] == 'refusee':
+                    st.error(f"{icon} **Statut:** {label}")
             
             # Générer et afficher le HTML
             import json
@@ -1067,6 +1142,75 @@ def show_heritage_client_view(token):
             
             # Générer le HTML
             html_content = soumission_heritage.generate_html()
+            
+            # Ajouter le bouton de téléchargement HTML pour impression
+            with col2:
+                # Préparer le HTML pour l'impression avec styles optimisés
+                html_for_print = html_content.replace('</head>', '''
+                <style>
+                @media print {
+                    body { 
+                        margin: 0; 
+                        padding: 10mm;
+                        font-size: 12pt;
+                    }
+                    .page-break { 
+                        page-break-after: always; 
+                    }
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+                    @page {
+                        size: A4;
+                        margin: 15mm;
+                    }
+                    /* Cacher les éléments non nécessaires */
+                    button, .no-print {
+                        display: none !important;
+                    }
+                }
+                /* Message pour guider l'utilisateur */
+                .print-instructions {
+                    display: none;
+                    padding: 20px;
+                    background: #f0f8ff;
+                    border: 2px solid #4a90e2;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                }
+                @media screen {
+                    .print-instructions {
+                        display: block;
+                    }
+                }
+                </style>
+                <script>
+                window.onload = function() {
+                    // Ajouter les instructions
+                    var instructions = document.createElement('div');
+                    instructions.className = 'print-instructions';
+                    instructions.innerHTML = '<h3>📄 Pour sauvegarder en PDF :</h3>' +
+                        '<ol>' +
+                        '<li>Cliquez sur <strong>Fichier → Imprimer</strong> (ou Ctrl+P)</li>' +
+                        '<li>Choisissez <strong>"Enregistrer en PDF"</strong> comme imprimante</li>' +
+                        '<li>Cliquez sur <strong>Enregistrer</strong></li>' +
+                        '</ol>' +
+                        '<button onclick="window.print()" style="padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">🖨️ Imprimer maintenant</button>';
+                    document.body.insertBefore(instructions, document.body.firstChild);
+                };
+                </script>
+                </head>''')
+                
+                # Bouton de téléchargement HTML uniquement
+                st.download_button(
+                    label="📄 Format HTML",
+                    data=html_for_print,
+                    file_name=f"soumission_{result[1]}.html",
+                    mime="text/html",
+                    help="Téléchargez et ouvrez dans le navigateur pour imprimer"
+                )
             
             # Afficher avec les boutons d'approbation si en attente
             from streamlit_compat import show_html
@@ -1096,6 +1240,89 @@ def show_heritage_client_view(token):
     except Exception as e:
         st.error(f"Erreur: {e}")
 
+def generate_pdf_from_html(html_content):
+    """Génère un PDF à partir du HTML"""
+    try:
+        # Utiliser xhtml2pdf pour convertir HTML en PDF
+        from xhtml2pdf import pisa
+        from io import BytesIO
+        
+        # Nettoyer le HTML pour éviter les problèmes d'encodage
+        import re
+        html_content = html_content.replace('\u2019', "'")
+        html_content = html_content.replace('\u201c', '"')
+        html_content = html_content.replace('\u201d', '"')
+        html_content = html_content.replace('\u2013', '-')
+        html_content = html_content.replace('\u2014', '--')
+        
+        # Remplacer les variables CSS par des valeurs fixes
+        css_replacements = {
+            'var(--primary-color)': '#1e40af',
+            'var(--secondary-color)': '#64748b',
+            'var(--accent-color)': '#3b82f6',
+            'var(--success-color)': '#22c55e',
+            'var(--error-color)': '#ef4444',
+            'var(--warning-color)': '#f59e0b',
+            'var(--bg-primary)': '#ffffff',
+            'var(--bg-secondary)': '#f8fafc',
+            'var(--text-primary)': '#1e293b',
+            'var(--text-secondary)': '#64748b',
+            'var(--border-color)': '#e2e8f0'
+        }
+        
+        for var_name, value in css_replacements.items():
+            html_content = html_content.replace(var_name, value)
+        
+        # Remplacer toutes les autres variables CSS restantes par une couleur par défaut
+        html_content = re.sub(r'var\\(--[^)]+\\)', '#333333', html_content)
+        
+        # Remplacer les fonctions CSS non supportées
+        html_content = re.sub(r'linear-gradient\\([^)]+\\)', '#3b82f6', html_content)
+        html_content = re.sub(r'radial-gradient\\([^)]+\\)', '#3b82f6', html_content)
+        html_content = re.sub(r'rgba\\([^)]+\\)', '#333333', html_content)
+        
+        # Simplifier les box-shadow
+        html_content = re.sub(r'box-shadow:[^;]+;', 'border: 1px solid #e2e8f0;', html_content)
+        
+        # Ajouter une balise meta pour l'encodage si elle n'existe pas
+        if '<meta charset=' not in html_content.lower():
+            html_content = html_content.replace(
+                '<head>',
+                '<head><meta charset="UTF-8">'
+            )
+        
+        # Créer un buffer pour le PDF
+        pdf_buffer = BytesIO()
+        
+        # Convertir HTML en PDF avec options améliorées
+        pisa_status = pisa.CreatePDF(
+            html_content.encode('utf-8'),
+            dest=pdf_buffer,
+            encoding='utf-8',
+            link_callback=lambda uri, rel: uri  # Conserver les liens tels quels
+        )
+        
+        # Récupérer le contenu PDF
+        pdf_buffer.seek(0)
+        pdf_data = pdf_buffer.read()
+        pdf_buffer.close()
+        
+        if not pisa_status.err:
+            return pdf_data
+        else:
+            return None
+            
+    except ImportError:
+        # Si xhtml2pdf n'est pas disponible, essayer une méthode alternative
+        try:
+            # Retourner le HTML encodé comme fallback
+            return html_content.encode('utf-8')
+        except:
+            return None
+    except Exception as e:
+        st.error(f"Erreur lors de la génération du PDF: {e}")
+        return None
+
 def show_client_view(token):
     """Affiche la vue client multi-format"""
     submission = get_submission_by_token(token)
@@ -1120,6 +1347,7 @@ def show_client_view(token):
         submission['statut'] = 'refusee'
         set_query_params(token=token)
         st.error("❌ Soumission REFUSÉE")
+    
     
     # Créer et afficher la page d'approbation
     approval_html = create_approval_page(submission)

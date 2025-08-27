@@ -15,8 +15,8 @@ COMPANY_INFO = {
     'name': 'Construction Héritage',
     'address': '129 Rue Poirier',
     'city': 'Saint-Jean-sur-Richelieu (Québec) J3B 4E9',
-    'phone': '438.524.9193',
-    'cell': '514.983.7492',
+    'phone': '438-524-9193',
+    'cell': '',
     'email': 'info@constructionheritage.ca',
     'rbq': '5788-9784-01',
     'neq': '1163835623',
@@ -1473,7 +1473,7 @@ def generate_html_for_pdf():
             <div class="company-info">
                 <strong>Construction Héritage</strong><br>
                 129 Rue Poirier, Saint-Jean-sur-Richelieu (Québec) J3B 4E9<br>
-                Tél: 438.524.9193 | Cell: 514.983.7492<br>
+                Cell: 438-524-9193<br>
                 info@constructionheritage.ca<br>
                 RBQ: 5788-9784-01 | NEQ: 1163835623
             </div>
@@ -1864,7 +1864,7 @@ def generate_html():
                 <strong>CONSTRUCTION HÉRITAGE</strong><br>
                 129 Rue Poirier<br>
                 Saint-Jean-sur-Richelieu (Québec) J3B 4E9<br>
-                Tél: 438.524.9193 | Cell: 514.983.7492<br>
+                Cell: 438-524-9193<br>
                 info@constructionheritage.ca<br>
                 <small>RBQ: 5788-9784-01 | NEQ: 1163835623</small>
             </div>
@@ -2048,7 +2048,7 @@ def generate_html():
             <div class="footer-info">
                 <p><strong>Construction Héritage</strong></p>
                 <p>129 Rue Poirier, Saint-Jean-sur-Richelieu (Québec) J3B 4E9</p>
-                <p>Tél: 438.524.9193 | Cell: 514.983.7492 | info@constructionheritage.ca</p>
+                <p>Cell: 438-524-9193 | info@constructionheritage.ca</p>
                 <p>RBQ: 5788-9784-01 | NEQ: 1163835623 | TPS: 850370164RT0001 | TVQ: 1212199610TQ0002</p>
             </div>
             <p style="font-size: 10px; color: #999; margin-top: 20px;">
