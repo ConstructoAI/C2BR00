@@ -1287,15 +1287,22 @@ def generate_html_for_pdf():
             
             for key, item in data['items'].items():
                 if key.startswith(cat_id + "_") and item.get('montant', 0) > 0:
+                    # S'assurer que les champs existent
+                    titre = item.get('titre', 'Item')
+                    description = item.get('description', '')
+                    quantite = item.get('quantite', 1)
+                    prix_unitaire = item.get('prix_unitaire', 0)
+                    montant = item.get('montant', 0)
+                    
                     html += f"""
                     <tr>
                         <td>
-                            <strong>{item['titre']}</strong><br>
-                            <small style="color: #666;">{item['description']}</small>
+                            <strong>{titre}</strong><br>
+                            <small style="color: #666;">{description}</small>
                         </td>
-                        <td class="text-center">{item.get('quantite', 1):.1f}</td>
-                        <td class="text-right">${item.get('prix_unitaire', 0):,.2f}</td>
-                        <td class="text-right"><strong>${item.get('montant', 0):,.2f}</strong></td>
+                        <td class="text-center">{quantite:.1f}</td>
+                        <td class="text-right">${prix_unitaire:,.2f}</td>
+                        <td class="text-right"><strong>${montant:,.2f}</strong></td>
                     </tr>
                     """
             
@@ -1394,92 +1401,10 @@ def generate_html_for_pdf():
     return html
 
 def generate_html():
-    """Génère le HTML de la soumission basé sur le template"""
-    # Charger le template original et le modifier avec les données
-    with open('TEMPLATE_SOUM_BIG_R03.html', 'r', encoding='utf-8') as f:
-        template = f.read()
+    """Génère le HTML de la soumission"""
+    # Utiliser la génération HTML complète au lieu du template manquant
+    return generate_html_for_pdf()
     
-    # Pour l'instant on retourne un HTML simple
-    # TODO: Implémenter la génération complète basée sur le template
-    
-    data = st.session_state.soumission_data
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Soumission {data['numero']}</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            .header {{ text-align: center; margin-bottom: 30px; }}
-            .section {{ margin: 20px 0; }}
-            table {{ width: 100%; border-collapse: collapse; }}
-            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #4b5563; color: white; }}
-            .total {{ font-weight: bold; font-size: 1.2em; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>SOUMISSION BUDGÉTAIRE</h1>
-            <h2>Construction Héritage</h2>
-            <p>Numéro: {data['numero']} | Date: {data['date']}</p>
-        </div>
-        
-        <div class="section">
-            <h3>Client</h3>
-            <p>{data['client'].get('nom', '')}<br>
-            {data['client'].get('adresse', '')}<br>
-            {data['client'].get('ville', '')} {data['client'].get('code_postal', '')}</p>
-        </div>
-        
-        <div class="section">
-            <h3>Projet</h3>
-            <p>{data['projet'].get('nom', '')}<br>
-            {data['projet'].get('adresse', '')}<br>
-            Type: {data['projet'].get('type', '')}</p>
-        </div>
-        
-        <div class="section">
-            <h3>Détails des travaux</h3>
-            <table>
-                <tr><th>Description</th><th>Montant</th></tr>
-    """
-    
-    # Ajouter les items
-    for key, item in data['items'].items():
-        if item['montant'] > 0:
-            html += f"""
-                <tr>
-                    <td>{item['titre']}</td>
-                    <td>${item['montant']:,.2f}</td>
-                </tr>
-            """
-    
-    # Ajouter les totaux
-    html += f"""
-            </table>
-        </div>
-        
-        <div class="section">
-            <h3>Récapitulatif</h3>
-            <table>
-                <tr><td>Total des travaux</td><td>${data['totaux']['travaux']:,.2f}</td></tr>
-                <tr><td>Administration</td><td>${data['totaux']['administration']:,.2f}</td></tr>
-                <tr><td>Contingences</td><td>${data['totaux']['contingences']:,.2f}</td></tr>
-                <tr><td>Profit</td><td>${data['totaux']['profit']:,.2f}</td></tr>
-                <tr><td>Sous-total</td><td>${data['totaux']['sous_total']:,.2f}</td></tr>
-                <tr><td>TPS (5%)</td><td>${data['totaux']['tps']:,.2f}</td></tr>
-                <tr><td>TVQ (9.975%)</td><td>${data['totaux']['tvq']:,.2f}</td></tr>
-                <tr class="total"><td>TOTAL FINAL</td><td>${data['totaux']['total']:,.2f}</td></tr>
-            </table>
-        </div>
-    </body>
-    </html>
-    """
-    
-    return html
 
 def show_soumission_heritage():
     """Fonction principale pour afficher le module de soumission"""
