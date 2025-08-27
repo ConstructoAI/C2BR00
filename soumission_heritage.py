@@ -259,7 +259,7 @@ def create_soumission_form():
     with tab2:
         st.markdown("### Détails des travaux")
         
-        # Style pour les tableaux
+        # Style pour les tableaux et champs éditables
         st.markdown("""
         <style>
             .stNumberInput > div > div > input {
@@ -274,6 +274,30 @@ def create_soumission_form():
             .item-table {
                 width: 100%;
                 margin: 10px 0;
+            }
+            /* Style pour les champs de texte dans les colonnes */
+            .stTextInput > div > div > input {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                font-weight: 600;
+            }
+            .stTextArea > div > div > textarea {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                font-size: 0.9em;
+                min-height: 50px !important;
+            }
+            /* Hover effect pour les champs éditables */
+            .stTextInput > div > div > input:hover,
+            .stTextArea > div > div > textarea:hover {
+                background-color: #ffffff;
+                border-color: #4b5563;
+            }
+            .stTextInput > div > div > input:focus,
+            .stTextArea > div > div > textarea:focus {
+                background-color: #ffffff;
+                border-color: #4b5563;
+                box-shadow: 0 0 0 0.2rem rgba(75, 85, 99, 0.25);
             }
         </style>
         """, unsafe_allow_html=True)
@@ -302,6 +326,7 @@ def create_soumission_form():
                 
                 category_total = 0
                 
+                # Afficher les items prédéfinis
                 for item in category['items']:
                     item_key = f"{cat_id}_{item['id']}"
                     
@@ -309,8 +334,23 @@ def create_soumission_form():
                     col1, col2, col3, col4, col5 = st.columns([3.5, 1, 1.5, 1.5, 0.5])
                     
                     with col1:
-                        st.markdown(f"**{item['title']}**")
-                        st.caption(item['description'])
+                        # Titre éditable
+                        custom_title = st.text_input(
+                            "Titre",
+                            value=st.session_state.soumission_data['items'].get(item_key, {}).get('titre', item['title']),
+                            key=f"title_{item_key}",
+                            label_visibility="collapsed",
+                            placeholder="Titre de l'item"
+                        )
+                        # Description éditable
+                        custom_description = st.text_area(
+                            "Description",
+                            value=st.session_state.soumission_data['items'].get(item_key, {}).get('description', item['description']),
+                            key=f"desc_{item_key}",
+                            label_visibility="collapsed",
+                            height=60,
+                            placeholder="Description détaillée"
+                        )
                     
                     with col2:
                         qty = st.number_input(
@@ -357,10 +397,10 @@ def create_soumission_form():
                             unit_price = 0
                             amount = 0
                     
-                    # Sauvegarder les données de l'item
+                    # Sauvegarder les données de l'item avec les valeurs personnalisées
                     st.session_state.soumission_data['items'][item_key] = {
-                        'titre': item['title'],
-                        'description': item['description'],
+                        'titre': custom_title,
+                        'description': custom_description,
                         'quantite': qty,
                         'prix_unitaire': unit_price,
                         'montant': amount
@@ -370,6 +410,125 @@ def create_soumission_form():
                     
                     # Ligne de séparation subtile
                     st.markdown("<hr style='margin: 5px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+                
+                # Section pour ajouter des items personnalisés
+                st.markdown("---")
+                
+                # Bouton pour ajouter une ligne personnalisée
+                with st.container():
+                    st.markdown("#### ➕ Ajouter une ligne personnalisée")
+                    
+                    # Initialiser les items personnalisés pour cette catégorie si nécessaire
+                    custom_items_key = f"custom_items_{cat_id}"
+                    if custom_items_key not in st.session_state:
+                        st.session_state[custom_items_key] = []
+                    
+                    # Formulaire pour ajouter un nouvel item
+                    col_add1, col_add2 = st.columns([3, 1])
+                    
+                    with col_add1:
+                        new_item_title = st.text_input(
+                            "Titre du nouvel item",
+                            key=f"new_title_{cat_id}",
+                            placeholder="Ex: Travaux supplémentaires"
+                        )
+                    
+                    with col_add2:
+                        if st.button("➕ Ajouter", key=f"add_btn_{cat_id}", use_container_width=True):
+                            if new_item_title:
+                                # Générer un ID unique pour le nouvel item
+                                import uuid
+                                new_item_id = str(uuid.uuid4())[:8]
+                                st.session_state[custom_items_key].append({
+                                    'id': new_item_id,
+                                    'title': new_item_title
+                                })
+                                st.rerun()
+                    
+                    # Afficher les items personnalisés
+                    for custom_item in st.session_state.get(custom_items_key, []):
+                        item_key = f"{cat_id}_custom_{custom_item['id']}"
+                        
+                        col1, col2, col3, col4, col5 = st.columns([3.5, 1, 1.5, 1.5, 0.5])
+                        
+                        with col1:
+                            # Titre éditable
+                            custom_title = st.text_input(
+                                "Titre",
+                                value=st.session_state.soumission_data['items'].get(item_key, {}).get('titre', custom_item['title']),
+                                key=f"title_{item_key}",
+                                label_visibility="collapsed",
+                                placeholder="Titre de l'item"
+                            )
+                            # Description éditable
+                            custom_description = st.text_area(
+                                "Description",
+                                value=st.session_state.soumission_data['items'].get(item_key, {}).get('description', ''),
+                                key=f"desc_{item_key}",
+                                label_visibility="collapsed",
+                                height=60,
+                                placeholder="Description détaillée"
+                            )
+                        
+                        with col2:
+                            qty = st.number_input(
+                                "Quantité",
+                                min_value=0.0,
+                                value=st.session_state.soumission_data['items'].get(item_key, {}).get('quantite', 1.0),
+                                step=1.0,
+                                key=f"qty_{item_key}",
+                                label_visibility="collapsed"
+                            )
+                        
+                        with col3:
+                            unit_price = st.number_input(
+                                "Coût unitaire",
+                                min_value=0.0,
+                                value=st.session_state.soumission_data['items'].get(item_key, {}).get('prix_unitaire', 0.0),
+                                format="%.2f",
+                                step=100.0,
+                                key=f"unit_{item_key}",
+                                label_visibility="collapsed"
+                            )
+                        
+                        # Calcul du montant total
+                        if admin_mode:
+                            amount = qty * unit_price
+                            with col4:
+                                st.markdown(f"<div style='text-align: right; font-weight: bold; padding: 8px; background: #f0f2f6; border-radius: 4px;'>${amount:,.2f}</div>", unsafe_allow_html=True)
+                        else:
+                            with col4:
+                                amount = st.number_input(
+                                    "Total",
+                                    min_value=0.0,
+                                    value=st.session_state.soumission_data['items'].get(item_key, {}).get('montant', 0.0),
+                                    format="%.2f",
+                                    step=100.0,
+                                    key=f"amount_{item_key}",
+                                    label_visibility="collapsed"
+                                )
+                        
+                        with col5:
+                            # Bouton pour supprimer l'item personnalisé
+                            if st.button("🗑️", key=f"del_custom_{item_key}", help="Supprimer cette ligne"):
+                                st.session_state[custom_items_key] = [
+                                    item for item in st.session_state[custom_items_key] 
+                                    if item['id'] != custom_item['id']
+                                ]
+                                if item_key in st.session_state.soumission_data['items']:
+                                    del st.session_state.soumission_data['items'][item_key]
+                                st.rerun()
+                        
+                        # Sauvegarder les données de l'item personnalisé
+                        st.session_state.soumission_data['items'][item_key] = {
+                            'titre': custom_title,
+                            'description': custom_description,
+                            'quantite': qty,
+                            'prix_unitaire': unit_price,
+                            'montant': amount
+                        }
+                        
+                        category_total += amount
                 
                 # Afficher le sous-total de la catégorie
                 st.markdown("---")
@@ -828,7 +987,16 @@ def save_soumission():
         # Générer un token unique
         import uuid
         token = str(uuid.uuid4())
-        lien_public = f"http://localhost:8501/?token={token}&type=heritage"
+        
+        # Déterminer l'URL de base selon l'environnement
+        if os.getenv('APP_URL'):
+            base_url = os.getenv('APP_URL')
+        elif os.getenv('RENDER'):
+            base_url = 'https://c2b-heritage.onrender.com'
+        else:
+            base_url = 'http://localhost:8501'
+        
+        lien_public = f"{base_url}/?token={token}&type=heritage"
         
         cursor.execute('''
             INSERT OR REPLACE INTO soumissions_heritage 

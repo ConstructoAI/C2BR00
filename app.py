@@ -315,7 +315,16 @@ def generate_token():
 
 def get_base_url():
     """Retourne l'URL de base"""
-    return os.getenv('APP_URL', 'http://localhost:8501')
+    # D'abord vérifier si une URL personnalisée est définie
+    if os.getenv('APP_URL'):
+        return os.getenv('APP_URL')
+    # Sinon, vérifier si on est sur Render
+    elif os.getenv('RENDER'):
+        # URL de production sur Render - à ajuster selon votre URL réelle
+        return 'https://c2b-heritage.onrender.com'
+    else:
+        # URL locale pour développement
+        return 'http://localhost:8501'
 
 def save_submission_multi(numero, nom_client, email_client, tel_client, nom_projet, montant, file, file_type):
     """Sauvegarde une soumission multi-format"""
@@ -466,7 +475,7 @@ def get_all_submissions():
                     'statut': row[5],
                     'date_creation': row[6],
                     'date_decision': row[7] if row[5] != 'en_attente' else None,
-                    'lien': row[8] if row[8] else f"http://localhost:8501/soumission_heritage?id={row[0]}",
+                    'lien': row[8] if row[8] else f"{get_base_url()}/soumission_heritage?id={row[0]}",
                     'email': None,  # Pas stocké dans Heritage pour l'instant
                     'telephone': None,  # Pas stocké dans Heritage pour l'instant
                     'file_type': '.html',  # Type par défaut pour Heritage
@@ -495,7 +504,7 @@ def get_all_submissions():
                     'statut': row[5],
                     'date_creation': row[6],
                     'date_decision': row[7] if row[5] != 'en_attente' else None,
-                    'lien': f"http://localhost:8501/soumission_heritage?id={row[0]}",
+                    'lien': f"{get_base_url()}/soumission_heritage?id={row[0]}",
                     'email': None,
                     'telephone': None,
                     'file_type': '.html',
