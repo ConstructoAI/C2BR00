@@ -1003,20 +1003,6 @@ def get_document_preview(submission):
                 </div>
             """
 
-def delete_heritage_submission(submission_id):
-    """Supprime une soumission Heritage"""
-    try:
-        import sqlite3
-        conn = sqlite3.connect('data/soumissions_heritage.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('DELETE FROM soumissions_heritage WHERE id = ?', (submission_id,))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        st.error(f"Erreur lors de la suppression: {e}")
-        return False
 
 def show_heritage_client_view(token):
     """Affiche la vue client pour une soumission Heritage"""
@@ -1130,20 +1116,32 @@ def show_client_view(token):
     approval_html = create_approval_page(submission)
     show_html(approval_html, height=1500, scrolling=True)
 
-def show_edit_heritage_form():
-    """Affiche le formulaire d'édition d'une soumission Heritage"""
-    st.header("✏️ Modifier la Soumission Heritage")
+def show_edit_form():
+    """Affiche le formulaire d'édition universel pour toutes les soumissions"""
+    st.header("✏️ Modifier la Soumission")
     
     if st.button("🔙 Retour au Dashboard"):
-        del st.session_state['edit_heritage_id']
+        if 'edit_heritage_id' in st.session_state:
+            del st.session_state['edit_heritage_id']
+        if 'edit_submission_id' in st.session_state:
+            del st.session_state['edit_submission_id']
         rerun()
     
-    submission_id = st.session_state.get('edit_heritage_id')
-    if not submission_id:
-        st.error("Aucune soumission à modifier")
-        return
+    # Déterminer quel type de soumission on édite
+    heritage_id = st.session_state.get('edit_heritage_id')
+    submission_id = st.session_state.get('edit_submission_id')
     
-    # Récupérer les données de la soumission
+    if heritage_id:
+        # Edition d'une soumission Heritage
+        show_edit_heritage_form_internal(heritage_id)
+    elif submission_id:
+        # Edition d'une soumission uploadée
+        show_edit_uploaded_form_internal(submission_id)
+    else:
+        st.error("Aucune soumission à modifier")
+
+def show_edit_heritage_form_internal(submission_id):
+    """Formulaire d'édition pour soumissions Heritage"""
     import sqlite3
     import json
     
@@ -1166,7 +1164,7 @@ def show_edit_heritage_form():
     # Charger les données
     data = json.loads(result[4]) if result[4] else {}
     
-    st.info(f"📝 Modification de la soumission **{result[0]}**")
+    st.info(f"📝 Modification de la soumission Heritage **{result[0]}**")
     
     # Formulaire d'édition simplifié
     with st.form("edit_heritage"):
@@ -1199,8 +1197,7 @@ def show_edit_heritage_form():
         st.divider()
         
         # Note sur le montant
-        st.info(f"💰 **Montant total actuel:** ${result[3]:,.2f}")
-        st.caption("ℹ️ Pour modifier les montants et les items, utilisez l'option 'Créer Soumission' et créez une nouvelle version")
+        montant = st.number_input("💰 Montant total ($)", value=float(result[3]), format="%.2f", step=100.0)
         
         col1, col2, col3 = st.columns(3)
         
@@ -1214,6 +1211,8 @@ def show_edit_heritage_form():
         
         if submitted:
             # Mettre à jour les données
+            data['client'] = data.get('client', {})
+            data['projet'] = data.get('projet', {})
             data['client']['nom'] = client_nom
             data['client']['adresse'] = client_adresse
             data['client']['telephone'] = client_telephone
@@ -1228,14 +1227,14 @@ def show_edit_heritage_form():
                 
                 cursor.execute('''
                     UPDATE soumissions_heritage 
-                    SET client_nom = ?, projet_nom = ?, data = ?, statut = ?, updated_at = CURRENT_TIMESTAMP
+                    SET client_nom = ?, projet_nom = ?, montant_total = ?, data = ?, statut = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
-                ''', (client_nom, projet_nom, json.dumps(data, ensure_ascii=False, default=str), statut, submission_id))
+                ''', (client_nom, projet_nom, montant, json.dumps(data, ensure_ascii=False, default=str), statut, submission_id))
                 
                 conn.commit()
                 conn.close()
                 
-                st.success("✅ Soumission mise à jour avec succès!")
+                st.success("✅ Soumission Heritage mise à jour avec succès!")
                 st.balloons()
                 
                 # Retour au dashboard après 2 secondes
@@ -1246,6 +1245,117 @@ def show_edit_heritage_form():
                 
             except Exception as e:
                 st.error(f"Erreur lors de la mise à jour: {e}")
+
+def show_edit_uploaded_form_internal(submission_id):
+    """Formulaire d'édition pour soumissions uploadées"""
+    import sqlite3
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT numero_soumission, nom_client, email_client, telephone_client,
+               nom_projet, montant_total, statut, file_name, file_type
+        FROM soumissions
+        WHERE id = ?
+    ''', (submission_id,))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    if not result:
+        st.error("Soumission non trouvée")
+        return
+    
+    st.info(f"📝 Modification de la soumission **{result[0]}** (Fichier: {result[7]})")
+    
+    with st.form("edit_uploaded"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("👤 Informations Client")
+            nom_client = st.text_input("Nom du client", value=result[1] or "")
+            email_client = st.text_input("Email", value=result[2] or "")
+            telephone_client = st.text_input("Téléphone", value=result[3] or "")
+        
+        with col2:
+            st.subheader("🏗️ Informations Projet")
+            nom_projet = st.text_input("Nom du projet", value=result[4] or "")
+            
+            # Statut
+            statut_options = ['en_attente', 'approuvee', 'refusee']
+            statut_labels = {'en_attente': '⏳ En attente', 'approuvee': '✅ Approuvée', 'refusee': '❌ Refusée'}
+            current_statut = result[6] or 'en_attente'
+            
+            statut = st.selectbox(
+                "Statut",
+                options=statut_options,
+                format_func=lambda x: statut_labels[x],
+                index=statut_options.index(current_statut)
+            )
+        
+        st.divider()
+        
+        # Montant
+        montant_total = st.number_input("💰 Montant total ($)", value=float(result[5] or 0), format="%.2f", step=100.0)
+        
+        st.caption(f"📄 Type de fichier: {result[8]} - {result[7]}")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            submitted = st.form_submit_button("💾 Sauvegarder", type="primary", use_container_width=True)
+        
+        with col2:
+            if st.form_submit_button("❌ Annuler", use_container_width=True):
+                del st.session_state['edit_submission_id']
+                rerun()
+        
+        if submitted:
+            try:
+                conn = sqlite3.connect(DATABASE_PATH)
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    UPDATE soumissions
+                    SET nom_client = ?, email_client = ?, telephone_client = ?,
+                        nom_projet = ?, montant_total = ?, statut = ?
+                    WHERE id = ?
+                ''', (nom_client, email_client, telephone_client, nom_projet, montant_total, statut, submission_id))
+                
+                conn.commit()
+                conn.close()
+                
+                st.success("✅ Soumission mise à jour avec succès!")
+                st.balloons()
+                
+                # Retour au dashboard après 2 secondes
+                import time
+                time.sleep(2)
+                del st.session_state['edit_submission_id']
+                rerun()
+                
+            except Exception as e:
+                st.error(f"Erreur lors de la mise à jour: {e}")
+
+def delete_submission(submission_id, is_heritage=False):
+    """Supprime une soumission (Heritage ou uploadée)"""
+    try:
+        if is_heritage:
+            conn = sqlite3.connect('data/soumissions_heritage.db')
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM soumissions_heritage WHERE id = ?', (submission_id,))
+        else:
+            conn = sqlite3.connect(DATABASE_PATH)
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM soumissions WHERE id = ?', (submission_id,))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Erreur lors de la suppression: {e}")
+        return False
 
 def show_admin_dashboard():
     """Dashboard administrateur multi-format"""
@@ -1273,8 +1383,8 @@ def show_admin_dashboard():
     """, unsafe_allow_html=True)
     
     # Vérifier si on doit afficher le mode édition
-    if 'edit_heritage_id' in st.session_state:
-        show_edit_heritage_form()
+    if 'edit_heritage_id' in st.session_state or 'edit_submission_id' in st.session_state:
+        show_edit_form()
     else:
         # Tabs principaux - bien visibles
         tab1, tab2, tab3 = st.tabs([
@@ -1487,19 +1597,26 @@ def show_dashboard_content():
                                 st.session_state['view_token'] = sub['lien'].split('token=')[1] if 'token=' in sub['lien'] else None
                                 rerun()
                     
-                    # Boutons modifier et supprimer pour les soumissions Heritage
-                    if sub.get('source') == 'heritage':
-                        with col_btn2:
-                            if st.button(f"✏️ Modifier", key=f"edit_{sub['id']}"):
+                    # Boutons modifier et supprimer pour TOUTES les soumissions
+                    with col_btn2:
+                        if st.button(f"✏️ Modifier", key=f"edit_{sub['id']}"):
+                            if sub.get('source') == 'heritage':
                                 st.session_state['edit_heritage_id'] = int(sub['id'][1:])
-                                st.session_state['active_tab'] = 'edit'
-                                rerun()
-                        
-                        with col_btn3:
-                            if st.button(f"🗑️ Suppr.", key=f"delete_{sub['id']}", type="secondary"):
+                            else:
+                                st.session_state['edit_submission_id'] = int(sub['id'])
+                            st.session_state['active_tab'] = 'edit'
+                            rerun()
+                    
+                    with col_btn3:
+                        if st.button(f"🗑️ Suppr.", key=f"delete_{sub['id']}", type="secondary"):
+                            if sub.get('source') == 'heritage':
                                 st.session_state['delete_heritage_id'] = int(sub['id'][1:])
-                                st.session_state['show_delete_confirm'] = True
-                                rerun()
+                                st.session_state['delete_is_heritage'] = True
+                            else:
+                                st.session_state['delete_submission_id'] = int(sub['id'])
+                                st.session_state['delete_is_heritage'] = False
+                            st.session_state['show_delete_confirm'] = True
+                            rerun()
     else:
         st.info("🚫 Aucune soumission. Uploadez votre premier document!")
 
@@ -1513,9 +1630,20 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ Oui, supprimer", type="primary"):
-                delete_heritage_submission(st.session_state.get('delete_heritage_id'))
+                # Déterminer quel type de soumission supprimer
+                if st.session_state.get('delete_is_heritage'):
+                    delete_submission(st.session_state.get('delete_heritage_id'), is_heritage=True)
+                    if 'delete_heritage_id' in st.session_state:
+                        del st.session_state['delete_heritage_id']
+                else:
+                    delete_submission(st.session_state.get('delete_submission_id'), is_heritage=False)
+                    if 'delete_submission_id' in st.session_state:
+                        del st.session_state['delete_submission_id']
+                
                 del st.session_state['show_delete_confirm']
-                del st.session_state['delete_heritage_id']
+                if 'delete_is_heritage' in st.session_state:
+                    del st.session_state['delete_is_heritage']
+                    
                 st.success("✅ Soumission supprimée avec succès!")
                 st.balloons()
                 import time
@@ -1524,7 +1652,12 @@ def main():
         with col2:
             if st.button("❌ Annuler"):
                 del st.session_state['show_delete_confirm']
-                del st.session_state['delete_heritage_id']
+                if 'delete_heritage_id' in st.session_state:
+                    del st.session_state['delete_heritage_id']
+                if 'delete_submission_id' in st.session_state:
+                    del st.session_state['delete_submission_id']
+                if 'delete_is_heritage' in st.session_state:
+                    del st.session_state['delete_is_heritage']
                 rerun()
         return
     
