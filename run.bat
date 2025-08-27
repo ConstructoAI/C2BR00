@@ -18,7 +18,7 @@ echo ============================================================
 echo.
 
 REM Verifier si Python est installe
-python --version >nul 2>&1
+py --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERREUR] Python n'est pas installe ou pas dans le PATH
     echo Veuillez installer Python depuis https://www.python.org
@@ -27,14 +27,14 @@ if %errorlevel% neq 0 (
 )
 
 echo [1/3] Verification de l'environnement Python...
-python --version
+py --version
 
 echo.
 echo [2/3] Installation des dependances...
-pip install -r requirements.txt --quiet 2>nul
+py -m pip install -r requirements.txt --quiet 2>nul
 if %errorlevel% neq 0 (
     echo Installation des packages en cours...
-    pip install -r requirements.txt
+    py -m pip install -r requirements.txt
 )
 
 echo.
@@ -62,7 +62,7 @@ echo Lancement de l'application...
 echo.
 
 REM Lancer Streamlit
-streamlit run app.py --server.port=8501 --server.address=localhost
+py -m streamlit run app.py --server.port=8501 --server.address=localhost
 
 echo.
 echo ============================================================
