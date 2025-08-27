@@ -553,39 +553,56 @@ def create_soumission_form():
         
         # Graphique de répartition
         if total_travaux > 0:
-            st.markdown("### 📈 Répartition des coûts")
-            
-            import plotly.graph_objects as go
-            
-            # Données pour le graphique
-            labels = []
-            values = []
-            
-            for cat_id, category in CATEGORIES.items():
-                cat_total = sum(
-                    item.get('montant', 0) 
-                    for key, item in st.session_state.soumission_data['items'].items()
-                    if key.startswith(cat_id + "_")
+            try:
+                import plotly.graph_objects as go
+                
+                st.markdown("### 📈 Répartition des coûts")
+                
+                # Données pour le graphique
+                labels = []
+                values = []
+                
+                for cat_id, category in CATEGORIES.items():
+                    cat_total = sum(
+                        item.get('montant', 0) 
+                        for key, item in st.session_state.soumission_data['items'].items()
+                        if key.startswith(cat_id + "_")
+                    )
+                    if cat_total > 0:
+                        labels.append(category['name'].split(' - ')[1])
+                        values.append(cat_total)
+                
+                # Créer le graphique en secteurs
+                fig = go.Figure(data=[go.Pie(
+                    labels=labels, 
+                    values=values,
+                    hole=.3,
+                    marker=dict(colors=['#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#f3f4f6', '#f9fafb', '#374151'])
+                )])
+                
+                fig.update_layout(
+                    height=400,
+                    showlegend=True,
+                    font=dict(size=12)
                 )
-                if cat_total > 0:
-                    labels.append(category['name'].split(' - ')[1])
-                    values.append(cat_total)
-            
-            # Créer le graphique en secteurs
-            fig = go.Figure(data=[go.Pie(
-                labels=labels, 
-                values=values,
-                hole=.3,
-                marker=dict(colors=['#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#f3f4f6', '#f9fafb', '#374151'])
-            )])
-            
-            fig.update_layout(
-                height=400,
-                showlegend=True,
-                font=dict(size=12)
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+            except ImportError:
+                # Si plotly n'est pas installé, afficher une version texte
+                st.markdown("### 📈 Répartition des coûts")
+                st.info("📊 Graphique non disponible (plotly non installé)")
+                
+                # Afficher les pourcentages en texte
+                for cat_id, category in CATEGORIES.items():
+                    cat_total = sum(
+                        item.get('montant', 0) 
+                        for key, item in st.session_state.soumission_data['items'].items()
+                        if key.startswith(cat_id + "_")
+                    )
+                    if cat_total > 0:
+                        percentage = (cat_total / total_travaux) * 100
+                        st.write(f"**{category['name'].split(' - ')[1]}**: ${cat_total:,.2f} ({percentage:.1f}%)")
         
         # Conditions et exclusions
         st.markdown("### 📝 Conditions")
