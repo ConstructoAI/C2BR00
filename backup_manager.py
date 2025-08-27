@@ -17,29 +17,51 @@ def create_backup():
     
     # Sauvegarder la base Heritage
     if os.path.exists('data/soumissions_heritage.db'):
-        conn = sqlite3.connect('data/soumissions_heritage.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM soumissions_heritage")
-        columns = [description[0] for description in cursor.description]
-        rows = cursor.fetchall()
-        backup_data['databases']['heritage'] = {
-            'columns': columns,
-            'data': rows
-        }
-        conn.close()
+        try:
+            conn = sqlite3.connect('data/soumissions_heritage.db')
+            cursor = conn.cursor()
+            
+            # Vérifier si la table existe
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='soumissions_heritage'
+            """)
+            
+            if cursor.fetchone():
+                cursor.execute("SELECT * FROM soumissions_heritage")
+                columns = [description[0] for description in cursor.description]
+                rows = cursor.fetchall()
+                backup_data['databases']['heritage'] = {
+                    'columns': columns,
+                    'data': rows
+                }
+            conn.close()
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde Heritage: {e}")
     
     # Sauvegarder la base Multi-format
     if os.path.exists('data/soumissions_multi.db'):
-        conn = sqlite3.connect('data/soumissions_multi.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM soumissions")
-        columns = [description[0] for description in cursor.description]
-        rows = cursor.fetchall()
-        backup_data['databases']['multi'] = {
-            'columns': columns,
-            'data': rows
-        }
-        conn.close()
+        try:
+            conn = sqlite3.connect('data/soumissions_multi.db')
+            cursor = conn.cursor()
+            
+            # Vérifier si la table existe
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='soumissions'
+            """)
+            
+            if cursor.fetchone():
+                cursor.execute("SELECT * FROM soumissions")
+                columns = [description[0] for description in cursor.description]
+                rows = cursor.fetchall()
+                backup_data['databases']['multi'] = {
+                    'columns': columns,
+                    'data': rows
+                }
+            conn.close()
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde Multi-format: {e}")
     
     # Créer un fichier ZIP avec toutes les données
     backup_filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
@@ -148,23 +170,49 @@ def show_backup_interface():
     
     with col1:
         if os.path.exists('data/soumissions_heritage.db'):
-            conn = sqlite3.connect('data/soumissions_heritage.db')
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM soumissions_heritage")
-            count = cursor.fetchone()[0]
-            conn.close()
-            st.metric("Soumissions Heritage", count)
+            try:
+                conn = sqlite3.connect('data/soumissions_heritage.db')
+                cursor = conn.cursor()
+                
+                # Vérifier si la table existe
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='soumissions_heritage'
+                """)
+                if cursor.fetchone():
+                    cursor.execute("SELECT COUNT(*) FROM soumissions_heritage")
+                    count = cursor.fetchone()[0]
+                else:
+                    count = 0
+                conn.close()
+                st.metric("Soumissions Heritage", count)
+            except Exception as e:
+                st.metric("Soumissions Heritage", "0 (Erreur)")
+                st.caption(f"Erreur: {str(e)}")
         else:
             st.metric("Soumissions Heritage", "0 (Base non trouvée)")
     
     with col2:
         if os.path.exists('data/soumissions_multi.db'):
-            conn = sqlite3.connect('data/soumissions_multi.db')
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM soumissions")
-            count = cursor.fetchone()[0]
-            conn.close()
-            st.metric("Soumissions Multi-format", count)
+            try:
+                conn = sqlite3.connect('data/soumissions_multi.db')
+                cursor = conn.cursor()
+                
+                # Vérifier si la table existe
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='soumissions'
+                """)
+                if cursor.fetchone():
+                    cursor.execute("SELECT COUNT(*) FROM soumissions")
+                    count = cursor.fetchone()[0]
+                else:
+                    count = 0
+                conn.close()
+                st.metric("Soumissions Multi-format", count)
+            except Exception as e:
+                st.metric("Soumissions Multi-format", "0 (Erreur)")
+                st.caption(f"Erreur: {str(e)}")
         else:
             st.metric("Soumissions Multi-format", "0 (Base non trouvée)")
 
